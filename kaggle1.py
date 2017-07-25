@@ -20,9 +20,9 @@ X_test = dataset_test.iloc[:, :].values
 
 
 ##
-#from sklearn.decomposition import PCA
-#pca = PCA(n_components = 12)
-#X2D = pca.fit_transform(X_train)
+from sklearn.decomposition import PCA
+pca = PCA(n_components = 2)
+X2D = pca.fit_transform(X_train)
 
 # Feature Scaling
 from sklearn.preprocessing import StandardScaler
@@ -33,27 +33,45 @@ X_test = sc.transform(X_test)
 # Fitting classifier to the Training set
 # Create your classifier here
 
-from sklearn.ensemble import RandomForestClassifier
-classifier1 = RandomForestClassifier(n_estimators = 500,criterion = 'entropy')
+from sklearn.model_selection import cross_val_score
+labels = y_train[:,0]
 
-from sklearn.naive_bayes import GaussianNB
-classifier2 = GaussianNB()
+from sklearn.ensemble import RandomForestClassifier
+classifier1 = RandomForestClassifier(n_estimators=1000, criterion='entropy', max_depth=5, min_samples_split=2,
+  min_samples_leaf=3, max_features='auto',    bootstrap=False, oob_score=False, n_jobs=1, random_state=33,
+  verbose=0)
+#calculating individual model accuracy
+accuracies0 = cross_val_score(estimator = classifier1, X = X_train , y = labels , cv = 10,n_jobs = -1)
+accuracies = accuracies0.mean()
 
 from sklearn.svm import SVC
-classifier3 = SVC(kernel = 'rbf', random_state = 0)
+classifier3 = SVC(C=7.9,gamma =0.01 ,kernel = 'rbf', random_state = 0)
+classifier3.fit(X_train,y_train)
+#calculating individual model accuracy
+accuracies2 = cross_val_score(estimator = classifier3, X = X_train , y = labels , cv = 10,n_jobs = -1)
+accuracies2 = accuracies2.mean()
 
-from sklearn.neighbors import KNeighborsClassifier
-classifier4 = KNeighborsClassifier(n_neighbors = 5, metric = 'minkowski', p = 2)
-
+#using voting classifier to improve model
 from sklearn.ensemble import VotingClassifier
-classifier = VotingClassifier(estimators=[('rf',classifier1),('nb',classifier2),
-                                          ('svm',classifier3),('knn',classifier4)],voting='hard')
-
+classifier = VotingClassifier(estimators=[('rf',classifier1),('svm',classifier3)],
+                                          voting='hard', weights = [1,1])
 classifier.fit(X_train, y_train)
-# Predicting the Test set results
-y_pred = classifier.predict(X_test)
+### Predicting the Test set results
+y_pred = classifier1.predict(X_test)
 
-f = open('result.csv','w')
+
+
+#Applying k-fold cross validation
+
+accuracies4 = cross_val_score(estimator = classifier, X = X_train , y = labels , cv = 10,n_jobs = -1)
+accuracies4 = accuracies4.mean()
+
+
+
+
+
+# outputing results of test set to file 
+f = open('result2.csv','w')
 f.write('ID,solution')
 f.write('\n')
 for i in range (0,9000):
